@@ -11,6 +11,7 @@ import lk.ijse.gdse.aad67.NoteCollector_V2.exception.UserNotFoundException;
 import lk.ijse.gdse.aad67.NoteCollector_V2.service.UserService;
 import lk.ijse.gdse.aad67.NoteCollector_V2.util.Mapping;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -23,14 +24,15 @@ public class UserServiceIMPL implements UserService {
     private UserDao userDao;
     @Autowired
     private Mapping mapping;
+
     @Override
     public void saveUser(UserDTO userDTO) {
-        UserEntity savedUser =
-                userDao.save(mapping.toUserEntity(userDTO));
+        UserEntity savedUser = userDao.save(mapping.toUserEntity(userDTO));
         if (savedUser == null) {
             throw new DataPersistException("User not saved");
         }
     }
+
     @Override
     public List<UserDTO> getAllUsers() {
         List<UserEntity> allUsers = userDao.findAll();
@@ -39,10 +41,10 @@ public class UserServiceIMPL implements UserService {
 
     @Override
     public UserStatus getUser(String userId) {
-        if(userDao.existsById(userId)){
+        if (userDao.existsById(userId)) {
             UserEntity selectedUser = userDao.getReferenceById(userId);
             return mapping.toUserDTO(selectedUser);
-        }else {
+        } else {
             return new SelectedUserAndNoteErrorStatus(2, "User with id " + userId + " not found");
         }
     }
@@ -50,9 +52,9 @@ public class UserServiceIMPL implements UserService {
     @Override
     public void deleteUser(String userId) {
         Optional<UserEntity> existedUser = userDao.findById(userId);
-        if(!existedUser.isPresent()){
+        if (!existedUser.isPresent()) {
             throw new UserNotFoundException("User with id " + userId + " not found");
-        }else {
+        } else {
             userDao.deleteById(userId);
         }
     }
@@ -60,12 +62,19 @@ public class UserServiceIMPL implements UserService {
     @Override
     public void updateUser(String userId, UserDTO userDTO) {
         Optional<UserEntity> tmpUser = userDao.findById(userId);
-        if(tmpUser.isPresent()) {
+        if (tmpUser.isPresent()) {
             tmpUser.get().setFirstName(userDTO.getFirstName());
             tmpUser.get().setLastName(userDTO.getLastName());
             tmpUser.get().setEmail(userDTO.getEmail());
             tmpUser.get().setPassword(userDTO.getPassword());
             tmpUser.get().setProfilePic(userDTO.getProfilePic());
         }
+    }
+
+    @Override
+    public UserDetailsService userDetailsService() {
+        return userName -> userDao
+                .findByEmail(userName)
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
     }
 }
